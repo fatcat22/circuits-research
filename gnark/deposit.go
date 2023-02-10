@@ -26,22 +26,19 @@ func (dp *Deposit) Define(api frontend.API) error {
 
 	// check user exist if isNewAccount
 	mimc.Write(dp.OldL1DepositRoot, dp.PubKey[0], dp.PubKey[1], dp.OldNonce, dp.OldBalance)
-	oldLeafHash := mimc.Sum()
-
-	sum := oldLeafHash
+	newSum := mimc.Sum()
 	for i := 1; i < len(dp.MerklePath); i++ {
 		api.AssertIsBoolean(dp.MerkleHelper[i-1])
-		d1 := api.Select(dp.MerkleHelper[i-1], sum, dp.MerklePath[i])
-		d2 := api.Select(dp.MerkleHelper[i-1], dp.MerklePath[i], sum)
+		d1 := api.Select(dp.MerkleHelper[i-1], newSum, dp.MerklePath[i])
+		d2 := api.Select(dp.MerkleHelper[i-1], dp.MerklePath[i], newSum)
 		mimc.Write(d1, d2)
-		sum = mimc.Sum()
+		newSum = mimc.Sum()
 	}
-	api.AssertIsEqual(oldLeafHash, api.Select(dp.IsNewAccount, oldLeafHash, sum))
+	api.AssertIsEqual(OldRoot, api.Select(dp.IsNewAccount, OldRoot, newSum))
 
 	// check new merkle root
-	mimc.Write()
-	leaf := []frontend.Variable{dp.L1DepositRoot, dp.PubKey[0], dp.PubKey[1], 0, dp.Balance}
-	dp.MerklePath[0] = leaf
+	//leaf := []frontend.Variable{dp.L1DepositRoot, dp.PubKey[0], dp.PubKey[1], 0, dp.Balance}
+	//dp.MerklePath[0] = leaf
 	//merklePath := append([]frontend.Variable{leaf}, dp.MerklePath...)
 	merkle.VerifyProof(api, mimc, dp.NewRoot, dp.MerklePath[:], dp.MerkleHelper[:])
 
